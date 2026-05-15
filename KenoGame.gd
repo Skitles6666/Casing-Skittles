@@ -2639,7 +2639,11 @@ func _build_roulette_table_panel() -> Control:
 	if table_texture != null:
 		var wheel_atlas := AtlasTexture.new()
 		wheel_atlas.atlas = table_texture
-		wheel_atlas.region = ROULETTE_WHEEL_CROP_RECT
+		var texture_scale := table_texture.get_size() / ROULETTE_TABLE_REFERENCE_SIZE
+		wheel_atlas.region = Rect2(
+			ROULETTE_WHEEL_CROP_RECT.position * texture_scale,
+			ROULETTE_WHEEL_CROP_RECT.size * texture_scale
+		)
 		roulette_wheel_texture.texture = wheel_atlas
 	roulette_table_surface.add_child(roulette_wheel_texture)
 
