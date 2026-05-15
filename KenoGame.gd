@@ -163,7 +163,7 @@ const CRAPS_POINT_MARKER_POSITIONS := {
 	10: Vector2(1180.0, 310.0),
 }
 const ROULETTE_STARTING_CREDITS := 500.0
-const ROULETTE_TABLE_IMAGE := "res://tables/roulette_table.webp"
+const ROULETTE_TABLE_IMAGE := "res://tables/roulette_table_and_wheel.png"
 const ROULETTE_RED_NUMBERS := [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]
 const ROULETTE_BET_OPTIONS := [
 	{"label": "Red pays 1:1", "id": "red", "payout": 1},
