@@ -1,0 +1,220 @@
+[gd_scene format=3 uid="uid://slotmachine"]
+
+[ext_resource type="Script" uid="uid://c6tjm6uos0vyx" path="res://assets/slot.gd" id="1_j1y7g"]
+
+[node name="Slot" type="Control" unique_id=877432883]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("1_j1y7g")
+
+[node name="MarginContainer" type="MarginContainer" parent="." unique_id=1058056]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = 20.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="MarginContainer" unique_id=1683350683]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/separation = 16
+
+[node name="Title" type="Label" parent="MarginContainer/VBox" unique_id=1833012034]
+layout_mode = 2
+theme_override_font_sizes/font_size = 28
+text = "Custom Art Slots"
+horizontal_alignment = 1
+
+[node name="Controls" type="HBoxContainer" parent="MarginContainer/VBox" unique_id=1343904379]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+size_flags_horizontal = 3
+theme_override_constants/separation = 12
+alignment = 1
+
+[node name="BetMinus" type="Button" parent="MarginContainer/VBox/Controls" unique_id=877267719]
+custom_minimum_size = Vector2(90, 60)
+layout_mode = 2
+size_flags_horizontal = 2
+text = "- Bet"
+
+[node name="SpinButton" type="Button" parent="MarginContainer/VBox/Controls" unique_id=482989205]
+custom_minimum_size = Vector2(180, 60)
+layout_mode = 2
+size_flags_horizontal = 2
+text = "Spin"
+
+[node name="AutoSpin" type="Button" parent="MarginContainer/VBox/Controls" unique_id=653225795]
+custom_minimum_size = Vector2(150, 60)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Auto Spin"
+
+[node name="BetPlus" type="Button" parent="MarginContainer/VBox/Controls" unique_id=799462229]
+custom_minimum_size = Vector2(90, 60)
+layout_mode = 2
+size_flags_horizontal = 2
+text = "+ Bet"
+
+[node name="Credits" type="Label" parent="MarginContainer/VBox/Controls" unique_id=1228749474]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Credits: 0"
+
+[node name="Bet" type="Label" parent="MarginContainer/VBox/Controls" unique_id=904109941]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Bet: 0"
+
+[node name="FreeGames" type="Label" parent="MarginContainer/VBox/Controls" unique_id=1929010922]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Free Games: 0"
+
+[node name="Spins" type="Label" parent="MarginContainer/VBox/Controls" unique_id=2100010001]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Spins: 0"
+
+[node name="Reels" type="GridContainer" parent="MarginContainer/VBox" unique_id=21552084]
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 3
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 12
+columns = 5
+
+[node name="Cell0" type="TextureRect" parent="MarginContainer/VBox/Reels" unique_id=277308795]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="Cell1" type="TextureRect" parent="MarginContainer/VBox/Reels" unique_id=1889808012]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="Cell2" type="TextureRect" parent="MarginContainer/VBox/Reels" unique_id=512320834]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="Cell3" type="TextureRect" parent="MarginContainer/VBox/Reels" unique_id=1143613788]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="Cell4" type="TextureRect" parent="MarginContainer/VBox/Reels" unique_id=1550011399]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="Cell5" type="TextureRect" parent="MarginContainer/VBox/Reels" unique_id=256080825]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="Cell6" type="TextureRect" parent="MarginContainer/VBox/Reels" unique_id=885803264]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="Cell7" type="TextureRect" parent="MarginContainer/VBox/Reels" unique_id=414786002]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="Cell8" type="TextureRect" parent="MarginContainer/VBox/Reels" unique_id=1000110146]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="Cell9" type="TextureRect" parent="MarginContainer/VBox/Reels" unique_id=1459924115]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="Cell10" type="TextureRect" parent="MarginContainer/VBox/Reels" unique_id=2072618096]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="Cell11" type="TextureRect" parent="MarginContainer/VBox/Reels" unique_id=1850034403]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="Cell12" type="TextureRect" parent="MarginContainer/VBox/Reels" unique_id=1386172344]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="Cell13" type="TextureRect" parent="MarginContainer/VBox/Reels" unique_id=2026373559]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="Cell14" type="TextureRect" parent="MarginContainer/VBox/Reels" unique_id=1492140919]
+custom_minimum_size = Vector2(120, 120)
+layout_mode = 2
+stretch_mode = 5
+
+[node name="Message" type="Label" parent="MarginContainer/VBox" unique_id=297829682]
+layout_mode = 2
+text = "Ready"
+horizontal_alignment = 1
+
+[node name="FeatureResultOverlay" type="Control" parent="." unique_id=2100000001]
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+z_index = 100
+
+[node name="Dim" type="ColorRect" parent="FeatureResultOverlay" unique_id=2100000002]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.65)
+
+[node name="Center" type="CenterContainer" parent="FeatureResultOverlay" unique_id=2100000003]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="VBox" type="VBoxContainer" parent="FeatureResultOverlay/Center" unique_id=2100000004]
+layout_mode = 2
+theme_override_constants/separation = 16
+alignment = 1
+
+[node name="FeatureWinLabel" type="Label" parent="FeatureResultOverlay/Center/VBox" unique_id=2100000005]
+layout_mode = 2
+text = "Feature Win: 0"
+horizontal_alignment = 1
+theme_override_font_sizes/font_size = 96
+
+[node name="FeatureContinueButton" type="Button" parent="FeatureResultOverlay/Center/VBox" unique_id=2100000006]
+layout_mode = 2
+custom_minimum_size = Vector2(220, 70)
+text = "Continue"
+theme_override_font_sizes/font_size = 28

@@ -1,0 +1,51 @@
+[gd_scene format=3 uid="uid://difw2dmqkv8j4"]
+
+[ext_resource type="Script" uid="uid://duvkq7a3et25p" path="res://assets/main.gd" id="1_06ig3"]
+[ext_resource type="Texture2D" uid="uid://bywuwrv5x5kxl" path="res://assets/player.png" id="1_db5cl"]
+
+[sub_resource type="RectangleShape2D" id="1"]
+size = Vector2(64, 64)
+
+[sub_resource type="RectangleShape2D" id="2"]
+size = Vector2(1200, 20)
+
+[sub_resource type="RectangleShape2D" id="3"]
+size = Vector2(1200, 20)
+
+[sub_resource type="RectangleShape2D" id="4"]
+size = Vector2(20, 720)
+
+[sub_resource type="RectangleShape2D" id="5"]
+size = Vector2(20, 720)
+
+[node name="Player" type="CharacterBody2D" unique_id=1734832650]
+script = ExtResource("1_06ig3")
+
+[node name="Sprite2D" type="Sprite2D" parent="." unique_id=339029518]
+texture = ExtResource("1_db5cl")
+position = Vector2(0, 0)
+scale = Vector2(3.34375, 3.21875)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("1")
+
+[node name="Camera2D" type="Camera2D" parent="." unique_id=2034538238]
+current = true
+
+[node name="Walls" type="StaticBody2D"]
+
+[node name="Top" type="CollisionShape2D" parent="Walls"]
+position = Vector2(0, -360)
+shape = SubResource("2")
+
+[node name="Bottom" type="CollisionShape2D" parent="Walls"]
+position = Vector2(0, 360)
+shape = SubResource("3")
+
+[node name="Left" type="CollisionShape2D" parent="Walls"]
+position = Vector2(-620, 0)
+shape = SubResource("4")
+
+[node name="Right" type="CollisionShape2D" parent="Walls"]
+position = Vector2(620, 0)
+shape = SubResource("5")

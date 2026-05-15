@@ -1,0 +1,114 @@
+{
+  "currency_unit": "coins",
+  "symbols": {
+    "ICE_GODDESS": {
+      "type": "wild",
+      "pays": {
+        "5": 125.0,
+        "4": 37.5,
+        "3": 12.5,
+        "2": 1.25
+      },
+      "substitutes_for": "*",
+      "excludes": [
+        "BONUS"
+      ]
+    },
+    "FROZEN_CREST": {
+      "type": "high",
+      "pays": {
+        "5": 100.0,
+        "4": 30.0,
+        "3": 10.0,
+        "2": 1.25
+      }
+    },
+    "DAGGER": {
+      "type": "high",
+      "pays": {
+        "5": 62.5,
+        "4": 20.0,
+        "3": 7.5
+      }
+    },
+    "MASK": {
+      "type": "high",
+      "pays": {
+        "5": 50.0,
+        "4": 17.5,
+        "3": 6.25
+      }
+    },
+    "CHALICE": {
+      "type": "high",
+      "pays": {
+        "5": 37.5,
+        "4": 15.0,
+        "3": 5.0
+      }
+    },
+    "AMULET": {
+      "type": "mid",
+      "pays": {
+        "5": 25.0,
+        "4": 12.5,
+        "3": 3.75
+      }
+    },
+    "A": {
+      "type": "low",
+      "pays": {
+        "5": 20.0,
+        "4": 10.0,
+        "3": 2.5
+      }
+    },
+    "K": {
+      "type": "low",
+      "pays": {
+        "5": 20.0,
+        "4": 10.0,
+        "3": 2.5
+      }
+    },
+    "Q": {
+      "type": "low",
+      "pays": {
+        "5": 15.0,
+        "4": 7.5,
+        "3": 1.25
+      }
+    },
+    "J": {
+      "type": "low",
+      "pays": {
+        "5": 15.0,
+        "4": 7.5,
+        "3": 1.25
+      }
+    },
+    "T": {
+      "type": "low",
+      "pays": {
+        "5": 15.0,
+        "4": 7.5,
+        "3": 1.25
+      }
+    },
+    "BONUS": {
+      "type": "scatter",
+      "pays": {},
+      "appears_on": [
+        1,
+        3,
+        5
+      ],
+      "triggers": "free_spins"
+    }
+  },
+  "notes": {
+    "lines": 30,
+    "coins_per_line": 1,
+    "award_cap_multiplier": 5000
+  }
+}

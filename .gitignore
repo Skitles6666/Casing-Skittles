@@ -1,0 +1,46 @@
+# Godot 4+ generated files
+.godot/
+.import/
+android/
+export_presets.cfg
+
+# Bundled editor/runtime binaries
+Godot*_win64.exe
+Godot*_win64_console.exe
+**/Godot*_win64.exe
+**/Godot*_win64_console.exe
+**/*.dll
+**/*.dylib
+**/*.so
+
+# Local/editor plugins that are not required to run the casino
+**/addons/annotated_screenshot/
+**/addons/godot_vscode_ide/
+**/addons/GodAgent/
+**/addons/godot_wry/
+**/addons/godot_wry/bin/
+
+# Unity generated files
+Library/
+Temp/
+Obj/
+Build/
+Builds/
+Logs/
+UserSettings/
+MemoryCaptures/
+Recordings/
+Slotgame/Library/
+Slotgame/Logs/
+Slotgame/UserSettings/
+
+# IDE and OS noise
+.vs/
+.vscode/
+*.csproj
+*.sln
+*.user
+*.tmp
+*.log
+Thumbs.db
+desktop.ini

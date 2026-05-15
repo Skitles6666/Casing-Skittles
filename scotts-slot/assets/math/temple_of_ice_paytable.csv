@@ -1,0 +1,13 @@
+symbol,type,5oak,4oak,3oak,2oak,notes
+ICE_GODDESS,wild,125.0,37.5,12.5,1.25,Substitutes all except BONUS
+FROZEN_CREST,high,100.0,30.0,10.0,1.25,
+DAGGER,high,62.5,20.0,7.5,0.0,
+MASK,high,50.0,17.5,6.25,0.0,
+CHALICE,high,37.5,15.0,5.0,0.0,
+AMULET,mid,25.0,12.5,3.75,0.0,
+A,low,20.0,10.0,2.5,0.0,
+K,low,20.0,10.0,2.5,0.0,
+Q,low,15.0,7.5,1.25,0.0,
+J,low,15.0,7.5,1.25,0.0,
+T,low,15.0,7.5,1.25,0.0,
+BONUS,scatter,0.0,0.0,0.0,0.0,Appears reels 1/3/5; triggers free spins only
