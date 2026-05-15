@@ -164,6 +164,11 @@ const CRAPS_POINT_MARKER_POSITIONS := {
 }
 const ROULETTE_STARTING_CREDITS := 500.0
 const ROULETTE_TABLE_IMAGE := "res://tables/roulette_table_and_wheel.png"
+const ROULETTE_TABLE_REFERENCE_SIZE := Vector2(2048.0, 1104.0)
+const ROULETTE_WHEEL_CROP_RECT := Rect2(42.0, 201.0, 760.0, 760.0)
+const ROULETTE_WHEEL_CENTER := Vector2(421.0, 581.0)
+const ROULETTE_BALL_TRACK_RADIUS := 258.0
+const ROULETTE_CHIP_DENOMINATIONS := [1, 5, 10, 20, 25, 50, 100, 500]
 const ROULETTE_RED_NUMBERS := [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36]
 const ROULETTE_BET_OPTIONS := [
 	{"label": "Red pays 1:1", "id": "red", "payout": 1},
@@ -409,13 +414,25 @@ var roulette_status_label: Label
 var roulette_tip_label: Label
 var roulette_result_label: Label
 var roulette_history_label: Label
+var roulette_table_surface: Control
 var roulette_table_texture: TextureRect
+var roulette_wheel_texture: TextureRect
+var roulette_ball: Control
+var roulette_chip_layer: Control
+var roulette_chip_selector_row: HBoxContainer
+var roulette_chip_selector_buttons: Dictionary = {}
+var roulette_bet_zone_buttons: Dictionary = {}
+var roulette_bet_zone_rects: Dictionary = {}
 var roulette_credits := ROULETTE_STARTING_CREDITS
 var roulette_spins_played := 0
 var roulette_total_wagered := 0.0
 var roulette_total_paid := 0.0
 var roulette_last_pocket := 0
 var roulette_spin_history := []
+var roulette_bets := {}
+var roulette_selected_chip_value := 10.0
+var roulette_spin_in_progress := false
+var roulette_ball_angle := -0.7
 
 
 func _ready() -> void:
@@ -2534,29 +2551,14 @@ func _build_roulette_interface() -> void:
 	_apply_text_depth(roulette_bankroll_label)
 	top_bar.add_child(roulette_bankroll_label)
 
-	var bet_label := Label.new()
-	bet_label.text = "Bet"
-	bet_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	bet_label.add_theme_color_override("font_color", Color("#cad1df"))
-	top_bar.add_child(bet_label)
-
-	roulette_bet_spin = SpinBox.new()
-	roulette_bet_spin.min_value = 1.0
-	roulette_bet_spin.max_value = 500.0
-	roulette_bet_spin.step = 1.0
-	roulette_bet_spin.value = 10.0
-	roulette_bet_spin.custom_minimum_size = Vector2(95, 40)
-	top_bar.add_child(roulette_bet_spin)
-
 	roulette_bet_option = OptionButton.new()
-	roulette_bet_option.custom_minimum_size = Vector2(210, 40)
+	roulette_bet_option.custom_minimum_size = Vector2(250, 40)
+	roulette_bet_option.tooltip_text = "Shows the last betting spot you selected on the table."
 	for option in ROULETTE_BET_OPTIONS:
 		roulette_bet_option.add_item(str(option["label"]))
 		roulette_bet_option.set_item_metadata(roulette_bet_option.item_count - 1, option["id"])
 	roulette_bet_option.add_item("Straight 0 pays 35:1")
 	roulette_bet_option.set_item_metadata(roulette_bet_option.item_count - 1, "straight_0")
-	roulette_bet_option.add_item("Straight 00 pays 35:1")
-	roulette_bet_option.set_item_metadata(roulette_bet_option.item_count - 1, "straight_00")
 	for number in range(1, 37):
 		roulette_bet_option.add_item("Straight %d pays 35:1" % number)
 		roulette_bet_option.set_item_metadata(roulette_bet_option.item_count - 1, "straight_%d" % number)
@@ -2612,19 +2614,74 @@ func _build_roulette_table_panel() -> Control:
 	_apply_text_depth(roulette_status_label)
 	layout.add_child(roulette_status_label)
 
+	roulette_table_surface = Control.new()
+	roulette_table_surface.custom_minimum_size = Vector2(960, 518)
+	roulette_table_surface.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	roulette_table_surface.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	roulette_table_surface.clip_contents = true
+	roulette_table_surface.resized.connect(_layout_roulette_table_overlays)
+	layout.add_child(roulette_table_surface)
+
+	var table_texture := _load_image_texture(ROULETTE_TABLE_IMAGE)
 	roulette_table_texture = TextureRect.new()
-	roulette_table_texture.custom_minimum_size = Vector2(760, 560)
-	roulette_table_texture.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	roulette_table_texture.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	roulette_table_texture.expand_mode = TextureRect.EXPAND_FIT_WIDTH_PROPORTIONAL
+	roulette_table_texture.set_anchors_preset(Control.PRESET_FULL_RECT)
+	roulette_table_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	roulette_table_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	roulette_table_texture.texture = _load_image_texture(ROULETTE_TABLE_IMAGE)
-	layout.add_child(roulette_table_texture)
+	roulette_table_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	roulette_table_texture.texture = table_texture
+	roulette_table_surface.add_child(roulette_table_texture)
+
+	roulette_wheel_texture = TextureRect.new()
+	roulette_wheel_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	roulette_wheel_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	roulette_wheel_texture.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	roulette_wheel_texture.z_index = 2
+	if table_texture != null:
+		var wheel_atlas := AtlasTexture.new()
+		wheel_atlas.atlas = table_texture
+		wheel_atlas.region = ROULETTE_WHEEL_CROP_RECT
+		roulette_wheel_texture.texture = wheel_atlas
+	roulette_table_surface.add_child(roulette_wheel_texture)
+
+	_add_roulette_bet_zones()
+
+	roulette_chip_layer = Control.new()
+	roulette_chip_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	roulette_chip_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	roulette_chip_layer.z_index = 6
+	roulette_table_surface.add_child(roulette_chip_layer)
+
+	roulette_ball = _build_roulette_ball()
+	roulette_ball.z_index = 7
+	roulette_table_surface.add_child(roulette_ball)
 
 	var action_row := HBoxContainer.new()
-	action_row.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	action_row.add_theme_constant_override("separation", 16)
+	action_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	action_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	action_row.add_theme_constant_override("separation", 10)
 	layout.add_child(action_row)
+
+	roulette_chip_selector_row = HBoxContainer.new()
+	roulette_chip_selector_row.add_theme_constant_override("separation", 8)
+	action_row.add_child(roulette_chip_selector_row)
+	for denomination in ROULETTE_CHIP_DENOMINATIONS:
+		var chip_button := Button.new()
+		chip_button.text = "$%d" % int(denomination)
+		chip_button.toggle_mode = true
+		chip_button.custom_minimum_size = Vector2(62, 62)
+		chip_button.tooltip_text = "Select a $%d chip." % int(denomination)
+		chip_button.pressed.connect(_on_roulette_chip_selected.bind(float(denomination)))
+		var chip_texture := _get_craps_chip_texture(float(denomination))
+		if chip_texture != null:
+			chip_button.icon = chip_texture
+			chip_button.expand_icon = true
+			chip_button.icon_alignment = HORIZONTAL_ALIGNMENT_CENTER
+			chip_button.vertical_icon_alignment = VERTICAL_ALIGNMENT_CENTER
+			chip_button.text = ""
+		chip_button.add_theme_font_size_override("font_size", 16)
+		_apply_button_text_depth(chip_button)
+		roulette_chip_selector_buttons[float(denomination)] = chip_button
+		roulette_chip_selector_row.add_child(chip_button)
 
 	roulette_spin_button = Button.new()
 	roulette_spin_button.text = "Spin"
@@ -2705,6 +2762,161 @@ func _build_roulette_info_panel() -> Control:
 	rules_scroll.add_child(rules)
 
 	return panel
+
+
+func _add_roulette_bet_zones() -> void:
+	roulette_bet_zone_rects = _roulette_bet_zone_rects()
+	roulette_bet_zone_buttons.clear()
+	roulette_bets.clear()
+	for key in roulette_bet_zone_rects.keys():
+		roulette_bets[key] = 0.0
+		var zone := Button.new()
+		zone.text = ""
+		zone.flat = true
+		zone.focus_mode = Control.FOCUS_NONE
+		zone.tooltip_text = "Place chip on %s" % _roulette_bet_display_name(str(key))
+		zone.set_meta("roulette_key", str(key))
+		zone.pressed.connect(_on_roulette_table_bet_pressed.bind(str(key)))
+		zone.z_index = 4
+		_apply_roulette_zone_style(zone, false, false)
+		roulette_table_surface.add_child(zone)
+		roulette_bet_zone_buttons[key] = zone
+
+
+func _roulette_bet_zone_rects() -> Dictionary:
+	var zones := {}
+	var grid_origin := Vector2(956.0, 425.0)
+	var cell_size := Vector2(66.0, 82.0)
+	zones["straight_0"] = Rect2(883.0, 425.0, 73.0, 246.0)
+	for column in range(12):
+		var x := grid_origin.x + float(column) * cell_size.x
+		zones["straight_%d" % (3 + column * 3)] = Rect2(x, grid_origin.y, cell_size.x, cell_size.y)
+		zones["straight_%d" % (2 + column * 3)] = Rect2(x, grid_origin.y + cell_size.y, cell_size.x, cell_size.y)
+		zones["straight_%d" % (1 + column * 3)] = Rect2(x, grid_origin.y + cell_size.y * 2.0, cell_size.x, cell_size.y)
+
+	zones["column_3"] = Rect2(1748.0, 425.0, 76.0, 82.0)
+	zones["column_2"] = Rect2(1748.0, 507.0, 76.0, 82.0)
+	zones["column_1"] = Rect2(1748.0, 589.0, 76.0, 82.0)
+	zones["first_dozen"] = Rect2(956.0, 678.0, 265.0, 65.0)
+	zones["second_dozen"] = Rect2(1221.0, 678.0, 263.0, 65.0)
+	zones["third_dozen"] = Rect2(1484.0, 678.0, 263.0, 65.0)
+	zones["low"] = Rect2(956.0, 744.0, 132.0, 116.0)
+	zones["odd"] = Rect2(1088.0, 744.0, 132.0, 116.0)
+	zones["red"] = Rect2(1220.0, 744.0, 132.0, 116.0)
+	zones["black"] = Rect2(1352.0, 744.0, 132.0, 116.0)
+	zones["even"] = Rect2(1484.0, 744.0, 132.0, 116.0)
+	zones["high"] = Rect2(1616.0, 744.0, 132.0, 116.0)
+	return zones
+
+
+func _layout_roulette_table_overlays() -> void:
+	if roulette_table_surface == null:
+		return
+
+	var image_rect := _roulette_table_image_rect()
+	for key in roulette_bet_zone_buttons.keys():
+		var zone: Button = roulette_bet_zone_buttons[key]
+		var reference_rect: Rect2 = roulette_bet_zone_rects[key]
+		var mapped_rect := _map_roulette_reference_rect(reference_rect, image_rect)
+		zone.position = mapped_rect.position
+		zone.size = mapped_rect.size
+
+	if roulette_wheel_texture != null:
+		var wheel_rect := _map_roulette_reference_rect(ROULETTE_WHEEL_CROP_RECT, image_rect)
+		roulette_wheel_texture.position = wheel_rect.position
+		roulette_wheel_texture.size = wheel_rect.size
+		roulette_wheel_texture.pivot_offset = wheel_rect.size * 0.5
+
+	_position_roulette_ball()
+	_refresh_roulette_chips()
+
+
+func _roulette_table_image_rect() -> Rect2:
+	if roulette_table_surface == null:
+		return Rect2(Vector2.ZERO, ROULETTE_TABLE_REFERENCE_SIZE)
+
+	var surface_size := roulette_table_surface.size
+	if surface_size.x <= 0.0 or surface_size.y <= 0.0:
+		return Rect2(Vector2.ZERO, ROULETTE_TABLE_REFERENCE_SIZE)
+
+	var scale: float = min(surface_size.x / ROULETTE_TABLE_REFERENCE_SIZE.x, surface_size.y / ROULETTE_TABLE_REFERENCE_SIZE.y)
+	var displayed_size: Vector2 = ROULETTE_TABLE_REFERENCE_SIZE * scale
+	var origin: Vector2 = (surface_size - displayed_size) * 0.5
+	return Rect2(origin, displayed_size)
+
+
+func _map_roulette_reference_point(point: Vector2, image_rect: Rect2) -> Vector2:
+	return image_rect.position + Vector2(
+		(point.x / ROULETTE_TABLE_REFERENCE_SIZE.x) * image_rect.size.x,
+		(point.y / ROULETTE_TABLE_REFERENCE_SIZE.y) * image_rect.size.y
+	)
+
+
+func _map_roulette_reference_rect(reference_rect: Rect2, image_rect: Rect2) -> Rect2:
+	var top_left := _map_roulette_reference_point(reference_rect.position, image_rect)
+	var bottom_right := _map_roulette_reference_point(reference_rect.position + reference_rect.size, image_rect)
+	return Rect2(top_left, bottom_right - top_left)
+
+
+func _build_roulette_ball() -> Control:
+	var ball := PanelContainer.new()
+	ball.custom_minimum_size = Vector2(20, 20)
+	ball.size = ball.custom_minimum_size
+	ball.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#f9f7ef")
+	style.border_color = Color("#d8b95f")
+	style.set_border_width_all(2)
+	style.set_corner_radius_all(10)
+	style.shadow_color = Color("#000000aa")
+	style.shadow_size = 8
+	style.shadow_offset = Vector2(3, 4)
+	ball.add_theme_stylebox_override("panel", style)
+	return ball
+
+
+func _position_roulette_ball() -> void:
+	if roulette_ball == null:
+		return
+
+	var image_rect := _roulette_table_image_rect()
+	var scale := image_rect.size.x / ROULETTE_TABLE_REFERENCE_SIZE.x
+	var ball_size := Vector2.ONE * clampf(24.0 * scale, 12.0, 24.0)
+	var center := _map_roulette_reference_point(ROULETTE_WHEEL_CENTER, image_rect)
+	var radius := ROULETTE_BALL_TRACK_RADIUS * scale
+	var orbit := Vector2(cos(roulette_ball_angle), sin(roulette_ball_angle)) * radius
+	roulette_ball.size = ball_size
+	roulette_ball.position = center + orbit - ball_size * 0.5
+
+
+func _refresh_roulette_chips() -> void:
+	if roulette_chip_layer == null:
+		return
+
+	for child in roulette_chip_layer.get_children():
+		child.queue_free()
+
+	var image_rect := _roulette_table_image_rect()
+	var table_scale := image_rect.size.x / ROULETTE_TABLE_REFERENCE_SIZE.x
+	var chip_size := Vector2.ONE * clampf(72.0 * table_scale, 34.0, 58.0)
+	for key in roulette_bets.keys():
+		var amount := float(roulette_bets.get(key, 0.0))
+		if amount <= 0.0:
+			continue
+
+		var chip := _build_craps_chip(amount)
+		chip.custom_minimum_size = chip_size
+		chip.size = chip_size
+		var chip_position := _roulette_chip_position(str(key), image_rect)
+		chip.position = chip_position - chip_size * 0.5
+		roulette_chip_layer.add_child(chip)
+
+
+func _roulette_chip_position(key: String, image_rect: Rect2) -> Vector2:
+	if not roulette_bet_zone_rects.has(key):
+		return _map_roulette_reference_point(Vector2(1360.0, 640.0), image_rect)
+	var rect: Rect2 = roulette_bet_zone_rects[key]
+	return _map_roulette_reference_point(rect.position + rect.size * 0.5, image_rect)
 
 
 func _build_slots_interface() -> void:
@@ -2862,57 +3074,89 @@ func _on_craps_reset_pressed() -> void:
 
 
 func _on_roulette_spin_pressed() -> void:
-	var bet := float(roulette_bet_spin.value)
-	if bet > roulette_credits:
-		roulette_result_label.text = "Not enough credits for that bet."
+	if roulette_spin_in_progress:
 		return
 
-	var bet_id := _roulette_selected_bet_id()
-	var pocket := randi_range(-1, 36)
-	var is_win := _roulette_bet_wins(bet_id, pocket)
-	var payout_multiplier := _roulette_bet_payout_multiplier(bet_id)
-	var payout := bet * float(payout_multiplier + 1) if is_win else 0.0
-	var net := payout - bet
+	var total_bet := _roulette_total_active_bets()
+	if total_bet <= 0.0:
+		roulette_result_label.text = "Place at least one chip on the roulette table before spinning."
+		return
 
-	roulette_credits -= bet
-	roulette_total_wagered += bet
+	roulette_spin_in_progress = true
+	_refresh_roulette()
+
+	var pocket := randi_range(0, 36)
+	await _animate_roulette_spin(pocket)
+
 	roulette_spins_played += 1
 	roulette_last_pocket = pocket
-	if payout > 0.0:
-		roulette_credits += payout
-		roulette_total_paid += payout
 
 	var pocket_text := _roulette_pocket_text(pocket)
 	var color_text := _roulette_pocket_color_name(pocket)
-	var bet_text := roulette_bet_option.get_item_text(roulette_bet_option.selected)
-	if is_win:
-		roulette_result_label.text = "%s %s. %s wins: paid $%.2f, net %s." % [
-			pocket_text,
-			color_text,
-			bet_text,
-			payout,
-			_format_signed_money(net),
-		]
+	var paid := 0.0
+	var winners := []
+	for bet_key in roulette_bets.keys():
+		var stake := float(roulette_bets[bet_key])
+		if stake <= 0.0:
+			continue
+		if _roulette_bet_wins(str(bet_key), pocket):
+			var payout := stake * float(_roulette_bet_payout_multiplier(str(bet_key)) + 1)
+			paid += payout
+			winners.append("%s paid $%.2f" % [_roulette_bet_display_name(str(bet_key)), payout])
+		roulette_bets[bet_key] = 0.0
+
+	if paid > 0.0:
+		roulette_credits += paid
+		roulette_total_paid += paid
+
+	var net := paid - total_bet
+	var result_text := "%s %s. " % [pocket_text, color_text]
+	if winners.is_empty():
+		result_text += "All roulette bets lose $%.2f." % total_bet
 	else:
-		roulette_result_label.text = "%s %s. %s loses $%.2f." % [
-			pocket_text,
-			color_text,
-			bet_text,
-			bet,
-		]
+		result_text += "%s. Net %s." % [", ".join(winners), _format_signed_money(net)]
+	roulette_result_label.text = result_text
 
 	roulette_spin_history.push_front(
-		"Spin %d: %s %s | %s | %s" % [
+		"Spin %d: %s %s | wager $%.2f | paid $%.2f | %s" % [
 			roulette_spins_played,
 			pocket_text,
 			color_text,
-			bet_text,
+			total_bet,
+			paid,
 			_format_signed_money(net),
 		]
 	)
 	while roulette_spin_history.size() > 12:
 		roulette_spin_history.pop_back()
 
+	roulette_spin_in_progress = false
+	_refresh_roulette()
+
+
+func _on_roulette_chip_selected(amount: float) -> void:
+	roulette_selected_chip_value = amount
+	_refresh_roulette_chip_selector()
+
+
+func _on_roulette_table_bet_pressed(key: String) -> void:
+	if roulette_spin_in_progress:
+		return
+	if not roulette_bets.has(key):
+		return
+
+	var amount := roulette_selected_chip_value
+	if amount <= 0.0:
+		return
+	if amount > roulette_credits:
+		roulette_result_label.text = "Not enough credits for a $%.2f chip." % amount
+		return
+
+	roulette_credits -= amount
+	roulette_total_wagered += amount
+	roulette_bets[key] = float(roulette_bets[key]) + amount
+	_select_roulette_bet_option(key)
+	roulette_result_label.text = "$%.2f placed on %s." % [amount, _roulette_bet_display_name(key)]
 	_refresh_roulette()
 
 
@@ -2922,7 +3166,10 @@ func _on_roulette_reset_pressed() -> void:
 	roulette_total_wagered = 0.0
 	roulette_total_paid = 0.0
 	roulette_last_pocket = 0
+	roulette_spin_in_progress = false
 	roulette_spin_history.clear()
+	for key in roulette_bets.keys():
+		roulette_bets[key] = 0.0
 	roulette_result_label.text = "Credits reset. Choose a bet and spin."
 	_refresh_roulette()
 
@@ -4085,24 +4332,37 @@ func _refresh_roulette() -> void:
 		_format_signed_money(net),
 	]
 
-	var bet := float(roulette_bet_spin.value)
-	var can_spin := bet <= roulette_credits
+	var active_total := _roulette_total_active_bets()
+	var can_spin := active_total > 0.0 and not roulette_spin_in_progress
 	roulette_spin_button.disabled = not can_spin
-	roulette_bet_spin.editable = true
 	_apply_poker_action_button_style(roulette_spin_button, can_spin, Color("#2f8f5b"))
 	_apply_poker_action_button_style(roulette_reset_button, true, Color("#8f3535"))
+	_refresh_roulette_chip_selector()
 
 	var selected_bet := roulette_bet_option.get_item_text(roulette_bet_option.selected) if roulette_bet_option != null else "Red"
-	roulette_status_label.text = "American roulette: pick a bet, set a wager, then spin the 0/00 wheel."
-	roulette_tip_label.text = "Current bet: %s. Outside bets are steadier; straight numbers pay more but hit rarely." % selected_bet
+	roulette_status_label.text = "Select a chip, place it on the layout, then spin the single-zero wheel."
+	roulette_tip_label.text = "Selected chip: %s | Table chips: %s | Last spot: %s" % [
+		_format_craps_chip_amount(roulette_selected_chip_value),
+		_format_craps_chip_amount(active_total),
+		selected_bet,
+	]
 	if roulette_result_label.text.is_empty():
-		roulette_result_label.text = "Choose a roulette bet and spin."
+		roulette_result_label.text = "Choose a chip and click the roulette table."
 
 	if roulette_history_label != null:
 		if roulette_spin_history.is_empty():
-			roulette_history_label.text = "Spin history will appear here."
+			roulette_history_label.text = "%s\n\nSpin history will appear here." % _roulette_active_bets_text()
 		else:
-			roulette_history_label.text = "\n".join(roulette_spin_history)
+			roulette_history_label.text = "%s\n\n%s" % [_roulette_active_bets_text(), "\n".join(roulette_spin_history)]
+
+	for key in roulette_bet_zone_buttons.keys():
+		var amount := float(roulette_bets.get(key, 0.0))
+		var button: Button = roulette_bet_zone_buttons[key]
+		button.disabled = roulette_spin_in_progress
+		_apply_roulette_zone_style(button, amount > 0.0, roulette_spin_in_progress)
+
+	_refresh_roulette_chips()
+	_position_roulette_ball()
 
 
 func _set_craps_dice(die_a: int, die_b: int, rolling: bool, roll_frame := 0) -> void:
@@ -4350,6 +4610,97 @@ func _roulette_selected_bet_id() -> String:
 	return str(roulette_bet_option.get_item_metadata(roulette_bet_option.selected))
 
 
+func _animate_roulette_spin(pocket: int) -> void:
+	var target_angle := _roulette_pocket_angle(pocket)
+	if roulette_wheel_texture == null or roulette_ball == null:
+		roulette_ball_angle = target_angle
+		await get_tree().create_timer(0.35).timeout
+		return
+
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.tween_property(
+		roulette_wheel_texture,
+		"rotation_degrees",
+		roulette_wheel_texture.rotation_degrees - randf_range(1260.0, 1620.0),
+		2.55
+	).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
+	tween.tween_method(
+		Callable(self, "_set_roulette_ball_angle"),
+		roulette_ball_angle,
+		target_angle + TAU * randf_range(4.5, 5.5),
+		2.55
+	).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_OUT)
+	await tween.finished
+	_set_roulette_ball_angle(target_angle)
+
+
+func _set_roulette_ball_angle(angle: float) -> void:
+	roulette_ball_angle = fposmod(angle, TAU)
+	_position_roulette_ball()
+
+
+func _roulette_pocket_angle(pocket: int) -> float:
+	var wheel_order := [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26]
+	var index := 0
+	if pocket == -1:
+		index = 18
+	else:
+		index = max(0, wheel_order.find(pocket))
+	return -PI * 0.5 + (float(index) / float(wheel_order.size())) * TAU
+
+
+func _refresh_roulette_chip_selector() -> void:
+	if roulette_chip_selector_buttons.is_empty():
+		return
+
+	for amount_value in roulette_chip_selector_buttons.keys():
+		var amount := float(amount_value)
+		var button: Button = roulette_chip_selector_buttons[amount]
+		var selected := is_equal_approx(amount, roulette_selected_chip_value)
+		var unavailable := amount > roulette_credits
+		button.set_pressed_no_signal(selected)
+		button.disabled = roulette_spin_in_progress or unavailable
+		button.add_theme_stylebox_override("normal", _craps_selector_chip_style(selected, false))
+		button.add_theme_stylebox_override("hover", _craps_selector_chip_style(true, false))
+		button.add_theme_stylebox_override("pressed", _craps_selector_chip_style(true, true))
+		button.add_theme_stylebox_override("disabled", _craps_selector_chip_style(selected, false, true))
+		button.add_theme_color_override("font_color", Color("#101317") if selected else Color("#f6f0df"))
+		button.add_theme_color_override("font_hover_color", Color("#101317"))
+		button.add_theme_color_override("font_pressed_color", Color("#101317"))
+		button.add_theme_color_override("font_disabled_color", Color("#b9c0c9"))
+
+
+func _roulette_total_active_bets() -> float:
+	var total := 0.0
+	for key in roulette_bets.keys():
+		total += float(roulette_bets[key])
+	return total
+
+
+func _roulette_active_bets_text() -> String:
+	var lines := ["Active roulette chips:"]
+	var has_bet := false
+	for key in roulette_bets.keys():
+		var amount := float(roulette_bets[key])
+		if amount <= 0.0:
+			continue
+		has_bet = true
+		lines.append("%s: $%.2f" % [_roulette_bet_display_name(str(key)), amount])
+	if not has_bet:
+		lines.append("No chips on the layout yet.")
+	return "\n".join(lines)
+
+
+func _select_roulette_bet_option(key: String) -> void:
+	if roulette_bet_option == null:
+		return
+	for index in roulette_bet_option.item_count:
+		if str(roulette_bet_option.get_item_metadata(index)) == key:
+			roulette_bet_option.select(index)
+			return
+
+
 func _roulette_bet_wins(bet_id: String, pocket: int) -> bool:
 	if bet_id.begins_with("straight_"):
 		return _roulette_pocket_text(pocket) == bet_id.substr("straight_".length())
@@ -4396,6 +4747,37 @@ func _roulette_bet_payout_multiplier(bet_id: String) -> int:
 	return 1
 
 
+func _roulette_bet_display_name(bet_id: String) -> String:
+	if bet_id.begins_with("straight_"):
+		return "Straight %s" % bet_id.substr("straight_".length())
+	match bet_id:
+		"red":
+			return "Red"
+		"black":
+			return "Black"
+		"odd":
+			return "Odd"
+		"even":
+			return "Even"
+		"low":
+			return "1-18"
+		"high":
+			return "19-36"
+		"first_dozen":
+			return "1 to 12"
+		"second_dozen":
+			return "13 to 24"
+		"third_dozen":
+			return "25 to 36"
+		"column_1":
+			return "Column 1"
+		"column_2":
+			return "Column 2"
+		"column_3":
+			return "Column 3"
+	return bet_id.capitalize()
+
+
 func _roulette_pocket_text(pocket: int) -> String:
 	if pocket == -1:
 		return "00"
@@ -4410,15 +4792,15 @@ func _roulette_pocket_color_name(pocket: int) -> String:
 
 func _roulette_rules_text() -> String:
 	return "Goal\n" \
-		+ "Bet on where the ball lands on an American roulette wheel with 0, 00, and 1-36.\n\n" \
+		+ "Bet on where the ball lands on a single-zero roulette wheel with 0 and 1-36.\n\n" \
 		+ "Basic Flow\n" \
-		+ "1. Choose a bet type from the top bar.\n" \
-		+ "2. Set the wager.\n" \
-		+ "3. Press Spin.\n\n" \
+		+ "1. Choose a chip in front of you.\n" \
+		+ "2. Click the roulette layout to place that chip.\n" \
+		+ "3. Press Spin to send the wheel and ball around.\n\n" \
 		+ "Even Money Bets\n" \
-		+ "Red/black, odd/even, and 1-18/19-36 pay 1:1. Green 0 and 00 lose these bets.\n\n" \
+		+ "Red/black, odd/even, and 1-18/19-36 pay 1:1. Green 0 loses these bets.\n\n" \
 		+ "Dozens and Columns\n" \
-		+ "Each dozen or column pays 2:1. Green 0 and 00 lose.\n\n" \
+		+ "Each dozen or column pays 2:1. Green 0 loses.\n\n" \
 		+ "Straight Bets\n" \
 		+ "Pick one exact pocket: 0, 00, or 1-36. A hit pays 35:1.\n\n" \
 		+ "Beginner Play\n" \
@@ -6234,6 +6616,31 @@ func _apply_craps_zone_style(button: Button, has_chip: bool, disabled: bool) -> 
 	button.add_theme_color_override("font_hover_color", clear)
 	button.add_theme_color_override("font_pressed_color", clear)
 	button.add_theme_color_override("font_disabled_color", clear)
+
+
+func _apply_roulette_zone_style(button: Button, has_chip: bool, disabled: bool) -> void:
+	button.add_theme_stylebox_override("normal", _roulette_zone_style(false, has_chip, disabled))
+	button.add_theme_stylebox_override("hover", _roulette_zone_style(true, has_chip, disabled))
+	button.add_theme_stylebox_override("pressed", _roulette_zone_style(true, true, disabled))
+	button.add_theme_stylebox_override("disabled", _roulette_zone_style(false, has_chip, true))
+	var clear := Color(0, 0, 0, 0)
+	button.add_theme_color_override("font_color", clear)
+	button.add_theme_color_override("font_hover_color", clear)
+	button.add_theme_color_override("font_pressed_color", clear)
+	button.add_theme_color_override("font_disabled_color", clear)
+
+
+func _roulette_zone_style(hovered: bool, has_chip: bool, disabled: bool) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#d7b84922") if hovered and not disabled else Color(0, 0, 0, 0)
+	style.border_color = Color("#f6d85abf") if hovered and not disabled else Color(0, 0, 0, 0)
+	if has_chip and not disabled:
+		style.border_color = Color("#f6d85a7a")
+		style.set_border_width_all(2)
+	else:
+		style.set_border_width_all(2 if hovered and not disabled else 0)
+	style.set_corner_radius_all(4)
+	return style
 
 
 func _craps_zone_style(hovered: bool, has_chip: bool, disabled: bool) -> StyleBoxFlat:
