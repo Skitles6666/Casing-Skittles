@@ -185,8 +185,10 @@ const ROULETTE_BET_OPTIONS := [
 	{"label": "Column 3 pays 2:1", "id": "column_3", "payout": 2},
 ]
 const SLOT_SCENE_PATH := "res://assets/slot_machine.tscn"
+const LOBBY_IMAGE_PATH := "res://assets/lobby.png"
+const LOBBY_EXIT := "exit"
 
-var current_game := GAME_CRAPS
+var current_game := GAME_KENO
 var selected_card := 0
 var card_picks: Array = []
 var card_plays := []
@@ -433,6 +435,15 @@ var roulette_bets := {}
 var roulette_selected_chip_value := 10.0
 var roulette_spin_in_progress := false
 var roulette_ball_angle := -0.7
+var casino_root: MarginContainer
+var lobby_root: Control
+var lobby_background_texture: TextureRect
+var lobby_menu_buttons := []
+
+
+func _notification(what: int) -> void:
+	if what == NOTIFICATION_RESIZED:
+		_layout_lobby_buttons()
 
 
 func _ready() -> void:
@@ -465,7 +476,9 @@ func _build_interface() -> void:
 	margin.add_theme_constant_override("margin_top", 16)
 	margin.add_theme_constant_override("margin_right", 16)
 	margin.add_theme_constant_override("margin_bottom", 16)
+	margin.visible = false
 	add_child(margin)
+	casino_root = margin
 
 	var main := VBoxContainer.new()
 	main.add_theme_constant_override("separation", 12)
@@ -675,6 +688,7 @@ func _build_interface() -> void:
 	_refresh_craps()
 	_refresh_roulette()
 	call_deferred("_apply_default_panel_sizes")
+	_build_lobby_interface()
 
 
 func _build_game_switcher(parent: VBoxContainer) -> void:
@@ -767,14 +781,124 @@ func _build_game_switcher(parent: VBoxContainer) -> void:
 	switcher.add_child(spacer)
 
 	exit_game_button = Button.new()
-	exit_game_button.text = "Exit"
+	exit_game_button.text = "Lobby"
 	exit_game_button.custom_minimum_size = Vector2(100, 40)
-	exit_game_button.tooltip_text = "Exit the casino hall."
+	exit_game_button.tooltip_text = "Return to the lobby."
 	exit_game_button.pressed.connect(_on_exit_pressed)
 	_apply_button_text_depth(exit_game_button)
 	switcher.add_child(exit_game_button)
 	_apply_exit_tab_style()
 
+
+func _build_lobby_interface() -> void:
+	lobby_root = Control.new()
+	lobby_root.name = "Lobby"
+	lobby_root.mouse_filter = Control.MOUSE_FILTER_STOP
+	lobby_root.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(lobby_root)
+
+	var background := ColorRect.new()
+	background.color = Color("#050506")
+	background.set_anchors_preset(Control.PRESET_FULL_RECT)
+	lobby_root.add_child(background)
+
+	lobby_background_texture = TextureRect.new()
+	lobby_background_texture.name = "LobbyImage"
+	lobby_background_texture.texture = _load_lobby_texture()
+	lobby_background_texture.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	lobby_background_texture.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	lobby_background_texture.set_anchors_preset(Control.PRESET_FULL_RECT)
+	lobby_root.add_child(lobby_background_texture)
+
+	if lobby_background_texture.texture == null:
+		var missing_label := Label.new()
+		missing_label.text = "Lobby image missing: %s" % LOBBY_IMAGE_PATH
+		missing_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		missing_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		missing_label.add_theme_font_size_override("font_size", 28)
+		missing_label.add_theme_color_override("font_color", Color("#f5d067"))
+		missing_label.set_anchors_preset(Control.PRESET_FULL_RECT)
+		_apply_text_depth(missing_label)
+		lobby_root.add_child(missing_label)
+
+	_add_lobby_button(GAME_KENO, Rect2(0.37, 0.249, 0.24, 0.057), "Keno")
+	_add_lobby_button(GAME_POKER, Rect2(0.36, 0.316, 0.26, 0.057), "Poker")
+	_add_lobby_button(GAME_PAI_GOW, Rect2(0.285, 0.382, 0.43, 0.057), "Pai Gow Poker")
+	_add_lobby_button(GAME_BLACKJACK, Rect2(0.33, 0.449, 0.34, 0.057), "Blackjack")
+	_add_lobby_button(GAME_THREE_CARD, Rect2(0.245, 0.515, 0.51, 0.057), "3 Card Poker")
+	_add_lobby_button(GAME_BACCARAT, Rect2(0.34, 0.583, 0.32, 0.057), "Baccarat")
+	_add_lobby_button(GAME_CRAPS, Rect2(0.38, 0.650, 0.24, 0.057), "Craps")
+	_add_lobby_button(GAME_ROULETTE, Rect2(0.34, 0.715, 0.32, 0.057), "Roulette")
+	_add_lobby_button(GAME_SLOTS, Rect2(0.38, 0.785, 0.24, 0.057), "Slots")
+	_add_lobby_button(LOBBY_EXIT, Rect2(0.39, 0.849, 0.22, 0.057), "Exit")
+	_layout_lobby_buttons()
+
+
+func _add_lobby_button(game: String, normalized_rect: Rect2, label: String) -> void:
+	var button := Button.new()
+	button.text = ""
+	button.tooltip_text = label
+	button.focus_mode = Control.FOCUS_NONE
+	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	button.pressed.connect(_on_lobby_game_pressed.bind(game))
+	button.add_theme_stylebox_override("normal", _transparent_lobby_button_style(false, false))
+	button.add_theme_stylebox_override("hover", _transparent_lobby_button_style(true, false))
+	button.add_theme_stylebox_override("pressed", _transparent_lobby_button_style(true, true))
+	button.add_theme_color_override("font_color", Color(0, 0, 0, 0))
+	lobby_root.add_child(button)
+	lobby_menu_buttons.append({
+		"button": button,
+		"rect": normalized_rect,
+	})
+
+
+func _on_lobby_game_pressed(game: String) -> void:
+	if game == LOBBY_EXIT:
+		_quit_casino()
+		return
+
+	if lobby_root != null:
+		lobby_root.visible = false
+	if casino_root != null:
+		casino_root.visible = true
+	_on_game_selected(game)
+
+
+func _load_lobby_texture() -> Texture2D:
+	var image := Image.new()
+	if image.load(LOBBY_IMAGE_PATH) != OK:
+		return null
+	return ImageTexture.create_from_image(image)
+
+
+func _layout_lobby_buttons() -> void:
+	if lobby_root == null or lobby_background_texture == null or lobby_background_texture.texture == null:
+		return
+
+	var image_rect := _get_lobby_image_rect()
+	for entry in lobby_menu_buttons:
+		var button: Button = entry["button"]
+		var normalized_rect: Rect2 = entry["rect"]
+		button.position = image_rect.position + Vector2(
+			normalized_rect.position.x * image_rect.size.x,
+			normalized_rect.position.y * image_rect.size.y
+		)
+		button.size = Vector2(
+			normalized_rect.size.x * image_rect.size.x,
+			normalized_rect.size.y * image_rect.size.y
+		)
+
+
+func _get_lobby_image_rect() -> Rect2:
+	var viewport_size := lobby_root.size
+	var texture_size := lobby_background_texture.texture.get_size()
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0 or texture_size.x <= 0.0 or texture_size.y <= 0.0:
+		return Rect2(Vector2.ZERO, viewport_size)
+
+	var scale_factor: float = min(viewport_size.x / texture_size.x, viewport_size.y / texture_size.y)
+	var display_size := texture_size * scale_factor
+	var display_position := (viewport_size - display_size) * 0.5
+	return Rect2(display_position, display_size)
 
 func _on_game_selected(game: String) -> void:
 	if game == current_game:
@@ -828,7 +952,14 @@ func _refresh_game_switcher() -> void:
 func _on_exit_pressed() -> void:
 	if auto_play_timer != null:
 		auto_play_timer.stop()
-	get_tree().quit()
+	if auto_play_button != null:
+		auto_play_button.set_pressed_no_signal(false)
+	_refresh_auto_play_button(false)
+	if casino_root != null:
+		casino_root.visible = false
+	if lobby_root != null:
+		lobby_root.visible = true
+		_layout_lobby_buttons()
 
 
 func _apply_game_tab_style(button: Button, active: bool) -> void:
@@ -854,6 +985,28 @@ func _apply_exit_button_style(button: Button) -> void:
 	button.add_theme_stylebox_override("pressed", _button_style(bg.darkened(0.12), Color("#ffffff"), 3, true))
 	button.add_theme_color_override("font_color", Color("#ffffff"))
 
+
+func _quit_casino() -> void:
+	if auto_play_timer != null:
+		auto_play_timer.stop()
+	get_tree().quit()
+
+
+func _transparent_lobby_button_style(hovered: bool, pressed := false) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = Color("#f5d0672a") if hovered else Color(0, 0, 0, 0)
+	style.border_color = Color("#f5d067aa") if hovered else Color(0, 0, 0, 0)
+	style.set_border_width_all(3 if hovered else 0)
+	style.set_corner_radius_all(8)
+	style.shadow_color = Color("#00000000")
+	style.content_margin_left = 0
+	style.content_margin_right = 0
+	style.content_margin_top = 0
+	style.content_margin_bottom = 0
+	if pressed:
+		style.bg_color = Color("#ffffff30")
+		style.border_color = Color("#ffffffcc")
+	return style
 
 func _apply_default_panel_sizes() -> void:
 	left_split.split_offset = CARD_PANEL_WIDTH
